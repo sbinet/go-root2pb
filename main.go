@@ -23,15 +23,15 @@ var do_gen = flag.String("gen", "", "generate the pb file(s) from the .proto one
 var verbose = flag.Bool("v", false, "verbose")
 
 var rt2pb_typemap = map[string]string{
-	"Char_t":      "bytes",
-	"Bool_t":      "bool",
-	"UInt_t":      "uint32",
-	"Int_t":       "int32",
-	"Int32_t":     "int32",
-	"Long_t":      "int64",
-	"Long64_t":    "int64",
-	"Float_t":     "float",
-	"Double_t":    "double",
+	"Char_t":   "bytes",
+	"Bool_t":   "bool",
+	"UInt_t":   "uint32",
+	"Int_t":    "int32",
+	"Int32_t":  "int32",
+	"Long_t":   "int64",
+	"Long64_t": "int64",
+	"Float_t":  "float",
+	"Double_t": "double",
 
 	"std::string": "string",
 	"string":      "string",
@@ -171,7 +171,7 @@ func main() {
 	//tree.Print("*")
 
 	branches := tree.GetListOfBranches()
-	fmt.Printf("#-branches: %v\n", branches.GetSize())
+	fmt.Printf("   #-branches: %v\n", branches.GetSize())
 
 	imax := branches.GetSize()
 	// if imax > 20 {
@@ -181,8 +181,7 @@ func main() {
 	type stringset map[string]struct{}
 	types := make(stringset)
 
-	type fieldmap map[string]pb_field
-	pbmap := make(fieldmap)
+	pb_fields := []pb_field{}
 
 	for i := int64(0); i < imax; i++ {
 		obj := branches.At(i)
@@ -197,12 +196,13 @@ func main() {
 		}
 		name := br.GetName()
 		pb_type, isrepeated := get_pb_type(typename)
-		pbmap[name] = pb_field{
-			Name:     name,
-			Type:     pb_type,
-			Id:       <-gen_id,
-			repeated: isrepeated,
-		}
+		pb_fields = append(pb_fields,
+			pb_field{
+				Name:     name,
+				Type:     pb_type,
+				Id:       <-gen_id,
+				repeated: isrepeated,
+			})
 		types[typename] = struct{}{}
 	}
 
@@ -230,10 +230,7 @@ func main() {
 	pb_pkg := pb_package{
 		Package: *pb_pkg_name,
 		Message: *pb_msg_name,
-		Fields:  make([]pb_field, 0, len(pbmap)),
-	}
-	for _, v := range pbmap {
-		pb_pkg.Fields = append(pb_pkg.Fields, v)
+		Fields:  pb_fields,
 	}
 
 	err = t.Execute(pb_file, pb_pkg)

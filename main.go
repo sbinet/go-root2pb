@@ -53,7 +53,14 @@ func main() {
 	for i := int64(0); i < imax; i++ {
 		obj := branches.At(i)
 		br := obj.(croot.Branch)
-		fmt.Printf(" [%d] -> [%v] (%v) (type:%v)\n", i, obj.GetName(), br.ClassName(), br.GetClassName())
+		typename := br.GetClassName()
+		if typename == "" {
+			leaf := tree.GetLeaf(br.GetName())
+			typename = leaf.GetTypeName()
+		}
+		fmt.Printf(" [%d] -> [%v] (%v) (type:%v)\n", i, obj.GetName(), br.ClassName(), typename)
+
 	}
+
 	fmt.Printf(":: bye.\n")
 }

@@ -32,16 +32,17 @@ var rt2pb_typemap = map[string]string{
 	"Long64_t":    "int64",
 	"Float_t":     "float",
 	"Double_t":    "double",
+
 	"std::string": "string",
 	"string":      "string",
 
 	"unsigned short": "uint32",
-	"unsigned int": "uint32",
-	"unsigned long": "uint64",
+	"unsigned int":   "uint32",
+	"unsigned long":  "uint64",
 
 	"short": "int32",
-	"int": "int32",
-	"long": "int64",
+	"int":   "int32",
+	"long":  "int64",
 }
 
 func get_pb_type(typename string) (pb_type string, isrepeated bool) {
@@ -111,13 +112,13 @@ var gen_id = make(chan int, 1)
 
 func path_exists(name string) bool {
 	_, err := os.Stat(name)
-    if err == nil {
-        return true
-    }
-    if os.IsNotExist(err) {
-        return false
-    }
-    return false
+	if err == nil {
+		return true
+	}
+	if os.IsNotExist(err) {
+		return false
+	}
+	return false
 }
 
 func main() {
@@ -205,11 +206,14 @@ func main() {
 		types[typename] = struct{}{}
 	}
 
-	fmt.Printf(":: types in tree [%s]:\n", *tname)
-	for k, _ := range types {
-		fmt.Printf(" %s\n", k)
+	if *verbose {
+		fmt.Printf(":: types in tree [%s]:\n", *tname)
+		for k, _ := range types {
+			fmt.Printf(" %s\n", k)
+		}
 	}
 
+	fmt.Printf(":: generating .proto file...\n")
 	t := template.New("Protobuf package template")
 	t, err := t.Parse(pb_pkg_templ)
 	if err != nil {
@@ -237,7 +241,8 @@ func main() {
 		fmt.Printf("**error** %v\n", err)
 		os.Exit(1)
 	}
-	
+	fmt.Printf(":: generating .proto file...[done]\n")
+
 	if *do_gen != "" {
 		args := []string{}
 		outdir := "."
@@ -251,7 +256,7 @@ func main() {
 			args = append(args, fmt.Sprintf("--java_out=%s", outdir))
 		}
 		if strings.Contains(*do_gen, "cpp") ||
-			strings.Contains(*do_gen, "cxx"){
+			strings.Contains(*do_gen, "cxx") {
 			args = append(args, fmt.Sprintf("--cpp_out=%s", outdir))
 		}
 		args = append(args, *oname)

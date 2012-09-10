@@ -41,6 +41,19 @@ func main() {
 			*tname, *fname)
 	}
 
-	
+	//tree.Print("*")
+
+	branches := tree.GetListOfBranches()
+	fmt.Printf("#-branches: %v\n", branches.GetSize())
+
+	imax := branches.GetSize()
+	if imax > 20 {
+		imax = 20
+	}
+	for i := int64(0); i < imax; i++ {
+		obj := branches.At(i)
+		br := obj.(croot.Branch)
+		fmt.Printf(" [%d] -> [%v] (%v) (type:%v)\n", i, obj.GetName(), br.ClassName(), br.GetClassName())
+	}
 	fmt.Printf(":: bye.\n")
 }

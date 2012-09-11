@@ -69,7 +69,7 @@ const pb_pkg_templ = `package {{.Package}};
 
 message {{.Message}} {
 {{with .Fields}}
-  {{range .}} {{.Header}} {{.Type}} {{.Name}} = {{.Id}}{{.Attr}}; 
+  {{range .}} {{.Modifier}} {{.Type}} {{.Name}} = {{.Id}}{{.Attr}}; 
   {{end}}
 {{end}}
 }
@@ -101,7 +101,7 @@ func (f pb_field) Attr() string {
 	return ""
 }
 
-func (f pb_field) Header() string {
+func (f pb_field) Modifier() string {
 	if f.repeated {
 		return "repeated"
 	}

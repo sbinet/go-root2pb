@@ -6,20 +6,24 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"text/template"
 
-	"github.com/sbinet/go-croot/pkg/croot"
-	//"code.google.com/p/goprotobuf/proto"
+
+	// import so root2pb-cnv is up to date...
+	_ "github.com/sbinet/go-root2pb/pbutils"
+
 )
 
 var fname = flag.String("f", "", "path to input ROOT file")
 var oname = flag.String("o", "out/event.proto", "path to output .proto file")
 var tname = flag.String("t", "", "name of the ROOT TTree to convert")
+var brsel = flag.String("sel", "", "comma-separated list of glob-patterns to select (with +foo*) and remove (with -foo*) branches from the output .proto file")
 var pb_pkg_name = flag.String("pkg", "event", "name of the protobuf package to be generated")
 var pb_msg_name = flag.String("msg", "Event", "name of the top-level message encoding the TTree")
 var do_gen = flag.String("gen", "", "generate the pb file(s) from the .proto one for each of output languages (go,py,cpp,java)")
-
+var do_cnv = flag.Bool("cnv", false, "convert the ROOT TTree's content into a binary pbuf file using the generated .pb.go package")
 var verbose = flag.Bool("v", false, "verbose")
 
 var rt2pb_typemap = map[string]string{
@@ -65,16 +69,6 @@ func get_pb_type(typename string) (pb_type string, isrepeated bool) {
 	return v, isrepeated
 }
 
-const pb_pkg_templ = `package {{.Package}};
-
-message {{.Message}} {
-{{with .Fields}}
-  {{range .}} {{.Modifier}} {{.Type}} {{.Name}} = {{.Id}}{{.Attr}}; 
-  {{end}}
-{{end}}
-}
-`
-
 type pb_package struct {
 	Package string
 	Message string
@@ -86,12 +80,13 @@ type pb_field struct {
 	Name     string
 	Type     string
 	Id       int
+	Branch   string
 	repeated bool
 	//tag     string
 }
 
 func (f pb_field) Attr() string {
-	attrs := []string{}
+	attrs := []string{fmt.Sprintf(`(root_branch) = %q`, f.Branch)}
 	if f.repeated && f.Type != "string" {
 		attrs = append(attrs, "packed=true")
 	}
@@ -105,21 +100,11 @@ func (f pb_field) Modifier() string {
 	if f.repeated {
 		return "repeated"
 	}
+	//return "required"
 	return "optional"
 }
 
 var gen_id = make(chan int, 1)
-
-func path_exists(name string) bool {
-	_, err := os.Stat(name)
-	if err == nil {
-		return true
-	}
-	if os.IsNotExist(err) {
-		return false
-	}
-	return false
-}
 
 func main() {
 	go func() {
@@ -138,8 +123,7 @@ func main() {
 	}
 
 	*fname = os.ExpandEnv(*fname)
-	*oname = os.ExpandEnv(*oname)
-
+	*oname = path.Clean(os.ExpandEnv(*oname))
 	outdir := path.Dir(*oname)
 
 	fmt.Printf(":: root->proto ::\n")
@@ -147,6 +131,17 @@ func main() {
 	fmt.Printf(":: output file: [%s]\n", *oname)
 	fmt.Printf(":: outdir:      [%s]\n", outdir)
 	fmt.Printf(":: tree:        [%s]\n", *tname)
+	fmt.Printf(":: selection:   [%s]\n", *brsel)
+
+	dname := path.Join(outdir, "descr.pbuf")
+
+	abspath, err := filepath.Abs(*oname)
+	if err != nil {
+		fmt.Printf("**error** could not compute absolute path: %v\n", err)
+		os.Exit(1)
+	}
+	*oname = abspath
+	outdir = path.Dir(*oname)
 
 	if !path_exists(outdir) {
 		err := os.Mkdir(outdir, os.ModeDir|os.ModePerm)
@@ -156,66 +151,11 @@ func main() {
 		}
 	}
 
-	f := croot.OpenFile(*fname, "read", "ROOT file", 1, 0)
-	if f == nil {
-		fmt.Printf("**error** could not open ROOT file [%s]\n", *fname)
-		os.Exit(1)
-	}
-
-	tree := f.GetTree(*tname)
-	if tree == nil {
-		fmt.Printf("**error** could not retrieve Tree [%s] from file [%s]\n",
-			*tname, *fname)
-	}
-
-	//tree.Print("*")
-
-	branches := tree.GetListOfBranches()
-	fmt.Printf("   #-branches: %v\n", branches.GetSize())
-
-	imax := branches.GetSize()
-	// if imax > 20 {
-	// 	imax = 20
-	// }
-
-	type stringset map[string]struct{}
-	types := make(stringset)
-
-	pb_fields := []pb_field{}
-
-	for i := int64(0); i < imax; i++ {
-		obj := branches.At(i)
-		br := obj.(croot.Branch)
-		typename := br.GetClassName()
-		if typename == "" {
-			leaf := tree.GetLeaf(br.GetName())
-			typename = leaf.GetTypeName()
-		}
-		if *verbose {
-			fmt.Printf(" [%d] -> [%v] (%v) (type:%v)\n", i, obj.GetName(), br.ClassName(), typename)
-		}
-		name := br.GetName()
-		pb_type, isrepeated := get_pb_type(typename)
-		pb_fields = append(pb_fields,
-			pb_field{
-				Name:     name,
-				Type:     pb_type,
-				Id:       <-gen_id,
-				repeated: isrepeated,
-			})
-		types[typename] = struct{}{}
-	}
-
-	if *verbose {
-		fmt.Printf(":: types in tree [%s]:\n", *tname)
-		for k, _ := range types {
-			fmt.Printf(" %s\n", k)
-		}
-	}
+	pb_fields := inspect_root_file(*fname, *tname)
 
 	fmt.Printf(":: generating .proto file...\n")
 	t := template.New("Protobuf package template")
-	t, err := t.Parse(pb_pkg_templ)
+	t, err = t.Parse(pb_pkg_templ)
 	if err != nil {
 		fmt.Printf("**error** %v\n", err)
 		os.Exit(1)
@@ -240,31 +180,49 @@ func main() {
 	}
 	fmt.Printf(":: generating .proto file...[done]\n")
 
-	if *do_gen != "" {
+	if *do_gen != "" || *do_cnv {
 		args := []string{}
-		outdir := "."
-		if strings.Contains(*do_gen, "go") {
-			args = append(args, fmt.Sprintf("--go_out=%s", outdir))
+		if strings.Contains(*do_gen, "go") || *do_cnv {
+			args = append(args, "--go_out=.")
 		}
 		if strings.Contains(*do_gen, "py") {
-			args = append(args, fmt.Sprintf("--python_out=%s", outdir))
+			args = append(args, "--python_out=.")
 		}
 		if strings.Contains(*do_gen, "java") {
-			args = append(args, fmt.Sprintf("--java_out=%s", outdir))
+			args = append(args, "--java_out=.")
 		}
 		if strings.Contains(*do_gen, "cpp") ||
 			strings.Contains(*do_gen, "cxx") {
-			args = append(args, fmt.Sprintf("--cpp_out=%s", outdir))
+			args = append(args, "--cpp_out=.")
 		}
-		args = append(args, *oname)
+
+		args = append(args,
+			fmt.Sprintf("--descriptor_set_out=%s", dname),
+			"-I", outdir,
+			"-I", "/usr/include",
+			*oname)
 		cmd := exec.Command("protoc", args...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Dir = outdir
 		err = cmd.Run()
 		if err != nil {
 			fmt.Printf("**error** running protoc: %v\n", err)
 			os.Exit(1)
-		} else {
-			fmt.Printf(":: pb file(s) generated.\n")
 		}
+		fmt.Printf(":: pb file(s) generated.\n")
+
 	}
+
+	if *do_cnv {
+		fmt.Printf(":: converting ROOT Tree's content into a pbuf...\n")
+		err = convert_tree(*fname, *tname, dname)
+		if err != nil {
+			fmt.Printf("**error** converting ROOT Tree: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf(":: converting ROOT Tree's content into a pbuf... [done]\n")
+	}
+
 	fmt.Printf(":: bye.\n")
 }

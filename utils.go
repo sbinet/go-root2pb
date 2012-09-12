@@ -128,7 +128,7 @@ func convert_tree(filename, treename, descr_fname string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("wkdir: %v\n", wkdir)
+	//fmt.Printf("wkdir: %v\n", wkdir)
 	err = os.MkdirAll(wkdir, os.ModeDir|os.ModePerm)
 	if err != nil {
 		return err
@@ -156,11 +156,14 @@ func convert_tree(filename, treename, descr_fname string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("srcdir: %v\n", srcdir)
+	//fmt.Printf("srcdir: %v\n", srcdir)
+	orig_gopath := go_build.Default.GOPATH
+	defer os.Setenv("GOPATH", orig_gopath)
+
 	go_build.Default.GOPATH = strings.Join(
 		[]string{wkdir, go_build.Default.GOPATH},
 		string(filepath.ListSeparator))
-	fmt.Printf("GOPATH: %v\n", go_build.Default.GOPATH)
+	//fmt.Printf("GOPATH: %v\n", go_build.Default.GOPATH)
 	err = os.Setenv("GOPATH", go_build.Default.GOPATH)
 
 	data, err := ioutil.ReadFile(descr_fname)
@@ -177,7 +180,7 @@ func convert_tree(filename, treename, descr_fname string) error {
 	pb_pkg_name := ""
 	pb_msg_name := ""
 
-	fmt.Printf(":: fdset: %v\n", len(fdset.File))
+	//fmt.Printf(":: fdset: %v\n", len(fdset.File))
 	for _, fd := range fdset.File {
 		// fmt.Printf(" name=%q\n", fd.GetName())
 		// fmt.Printf(" pkg=%q\n", fd.GetPackage())
@@ -253,8 +256,7 @@ func convert_tree(filename, treename, descr_fname string) error {
 
 	tmpldir := get_templates_dir()
 
-	fmt.Printf("tmpldir: %v\n", tmpldir)
-	//t := template.New("root2pb-cnv")
+	//fmt.Printf("tmpldir: %v\n", tmpldir)
 	t, err := template.ParseFiles(path.Join(tmpldir, "cnv.go"))
 	if err != nil {
 		fmt.Printf("**error** parsing template file: %v\n", err)
@@ -266,7 +268,7 @@ func convert_tree(filename, treename, descr_fname string) error {
 		return err
 	}
 	cnv_fname := path.Join(srcdir, "root2pb-cnv", "cnv.go")
-	fmt.Printf("cnv: %v\n", cnv_fname)
+	//fmt.Printf("cnv: %v\n", cnv_fname)
 	cnv, err := os.Create(cnv_fname)
 	if err != nil {
 		return err
@@ -302,7 +304,7 @@ func convert_tree(filename, treename, descr_fname string) error {
 	args := []string{
 		"-fname", filename,
 		"-tname", treename,
-		"-evtmax", "10",
+		"-evtmax", "-1",
 		"-oname", oname,
 	}
 	cmd = exec.Command(filepath.Join(wkdir, "bin", "root2pb-cnv"), args...)

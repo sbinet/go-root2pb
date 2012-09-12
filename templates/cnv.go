@@ -138,14 +138,12 @@ func main() {
 				}
 				for _, field := range msg.Field {
 					name := field.GetName()
-					typename := ""
-					if field.TypeName != nil {
-						typename = *field.TypeName
-					}
 					opts := fmt.Sprintf("%v",field.GetOptions())
 					is_repeated := field.GetLabel() == pb_descr.FieldDescriptorProto_LABEL_REPEATED
+					// FIXME: that's a vile hack...
+					// how do we retieve values out of extensions ??
 					root_branch := get_root_branch_name(opts)
-					fmt.Printf("    field: %q type=%v name=%q branch=%q opts=%v\n", name, field.GetType(), typename, root_branch, opts)
+					//fmt.Printf("    field: %q type=%v branch=%q opts=%v\n", name, field.GetType(), root_branch, opts)
 					ct := pbutils.FFIType(field)
 					var cval ffi.Value
 					var rval reflect.Value
@@ -194,7 +192,7 @@ func main() {
 			v := rdata.Values[i].GoValue()
 			switch v.Kind() {
 			case reflect.Slice:
-				fmt.Printf("--> %v\n", v.Interface())
+				//fmt.Printf("--> %v\n", v.Interface())
 				rdata.GoValues[i].Set(v)
 			default:
 				rdata.GoValues[i].Elem().Set(v.Addr())
@@ -207,8 +205,8 @@ func main() {
 				ievt, err)
 			os.Exit(1)
 		}
-		fmt.Printf("run-nbr=%v evt-nbr=%v el-nbr=%v el-eta=%v\n", 
-			evt.GetRunNumber(), evt.GetEventNumber(), evt.GetElN(), evt.ElEta)
+		// fmt.Printf("run-nbr=%v evt-nbr=%v el-nbr=%v el-eta=%v\n", 
+		// 	evt.GetRunNumber(), evt.GetEventNumber(), evt.GetElN(), evt.ElEta)
 		_, err = out.Write(data)
 		if err != nil {
 			fmt.Printf("**error** writing pbuf data to file: %v\n", err)

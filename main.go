@@ -10,10 +10,8 @@ import (
 	"strings"
 	"text/template"
 
-
 	// import so root2pb-cnv is up to date...
 	_ "github.com/sbinet/go-root2pb/pbutils"
-
 )
 
 var fname = flag.String("f", "", "path to input ROOT file")

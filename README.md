@@ -33,3 +33,7 @@ field with the ``[packed=true]`` attribute.)
 There might be issues for the cases where ``T`` is itself an
 ``std::vector``...
 
+The conversion of ``repeated`` messages and ``repeated`` builtins is
+broken at the moment (``croot.Tree`` doesn't fill correctly
+``ffi.Value``s when the value is a slice.)
+

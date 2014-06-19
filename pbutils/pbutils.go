@@ -3,7 +3,7 @@ package pbutils
 
 import (
 	protobuf "code.google.com/p/goprotobuf/protoc-gen-go/descriptor"
-	"github.com/sbinet/go-ffi/pkg/ffi"
+	"github.com/gonuts/ffi"
 )
 
 // FFIType returns the ffi.Type corresponding to a protobuf field descriptor.

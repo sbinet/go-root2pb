@@ -15,7 +15,7 @@ import (
 	"code.google.com/p/goprotobuf/proto"
 	pb_descr "code.google.com/p/goprotobuf/protoc-gen-go/descriptor"
 	pb_gen "code.google.com/p/goprotobuf/protoc-gen-go/generator"
-	"github.com/sbinet/go-croot/pkg/croot"
+	"github.com/go-hep/croot"
 )
 
 func path_exists(name string) bool {

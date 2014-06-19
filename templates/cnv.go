@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	msgpkg {{.Package}}
-	"github.com/sbinet/go-croot/pkg/croot"
-	"github.com/sbinet/go-ffi/pkg/ffi"
+	"github.com/go-hep/croot"
+	"github.com/gonuts/ffi"
 	"github.com/sbinet/go-root2pb/pbutils"
 	"code.google.com/p/goprotobuf/proto"
 	pb_descr "code.google.com/p/goprotobuf/protoc-gen-go/descriptor"
